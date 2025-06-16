@@ -68,6 +68,8 @@ from ultralytics.nn.modules import (
     YOLOEDetect,
     YOLOESegment,
     v10Detect,
+    C2f_WT,
+    C3k2_WT
 )
 from ultralytics.utils import DEFAULT_CFG_DICT, DEFAULT_CFG_KEYS, LOGGER, YAML, colorstr, emojis
 from ultralytics.utils.checks import check_requirements, check_suffix, check_yaml
@@ -1641,6 +1643,8 @@ def parse_model(d, ch, verbose=True):
             SCDown,
             C2fCIB,
             A2C2f,
+            C2f_WT,
+            C3k2_WT
         }
     )
     repeat_modules = frozenset(  # modules with 'repeat' arguments
@@ -1660,6 +1664,8 @@ def parse_model(d, ch, verbose=True):
             C2fCIB,
             C2PSA,
             A2C2f,
+            C2f_WT,
+            C3k2_WT
         }
     )
     for i, (f, n, m, args) in enumerate(d["backbone"] + d["head"]):  # from, number, module, args
@@ -1687,7 +1693,7 @@ def parse_model(d, ch, verbose=True):
             if m in repeat_modules:
                 args.insert(2, n)  # number of repeats
                 n = 1
-            if m is C3k2:  # for M/L/X sizes
+            if m in [C3k2, C3k2_WT]:  # for M/L/X sizes
                 legacy = False
                 if scale in "mlx":
                     args[3] = True
