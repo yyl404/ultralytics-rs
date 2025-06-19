@@ -1,9 +1,10 @@
 import pywt
-import pywt.data
 import torch
 from torch import nn
 from functools import partial
 import torch.nn.functional as F
+
+from .tdtb import TDTB
 
 
 # 论文地址 https://arxiv.org/pdf/2407.05848
@@ -84,6 +85,9 @@ class WTConv2d(nn.Module):
         else:
             self.do_stride = None
 
+        self.tdtb_cascade = nn.ModuleList([TDTB(in_channels, in_channels) for _ in range(self.wt_levels-1)])
+        self.tdtb_base = TDTB(in_channels, in_channels)
+
     def forward(self, x):
 
         x_ll_in_levels = []
@@ -116,7 +120,9 @@ class WTConv2d(nn.Module):
             curr_x_ll = x_ll_in_levels.pop()
             curr_x_h = x_h_in_levels.pop()
             curr_shape = shapes_in_levels.pop()
-
+            
+            if isinstance(next_x_ll, torch.Tensor):
+                curr_x_ll, next_x_ll = self.tdtb_cascade[i-1](curr_x_ll, next_x_ll)
             curr_x_ll = curr_x_ll + next_x_ll
 
             curr_x = torch.cat([curr_x_ll.unsqueeze(2), curr_x_h], dim=2)
@@ -128,6 +134,7 @@ class WTConv2d(nn.Module):
         assert len(x_ll_in_levels) == 0
 
         x = self.base_scale(self.base_conv(x))
+        x, x_tag = self.tdtb_base(x, x_tag)
         x = x + x_tag
 
         if self.do_stride is not None:
